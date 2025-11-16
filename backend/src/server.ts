@@ -55,7 +55,7 @@ app.use('/docs', sui.serve, sui.setup(YAML.parse(file), { swaggerOptions: { docE
 
 // Setting up the configuration for your webserver
 const PORT: number = parseInt(process.env.PORT || config.port);
-const HOST: string = process.env.IP || '127.0.0.1';
+const HOST: string = '0.0.0.0';
 
 // ====================================================================
 //  ================= WORK IS DONE BELOW THIS LINE ===================

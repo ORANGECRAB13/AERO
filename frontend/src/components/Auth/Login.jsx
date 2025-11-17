@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import './Auth.css'
+import { apiFetch } from '../../api.js'  // adjust path if needed
 
 const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('')
@@ -14,7 +15,7 @@ const Login = ({ onLogin }) => {
     setLoading(true)
 
     try {
-      const response = await fetch('http://127.0.0.1:3200/v1/admin/auth/login', {
+      const response = await apiFetch('/v1/admin/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,4 +83,3 @@ const Login = ({ onLogin }) => {
 }
 
 export default Login
-

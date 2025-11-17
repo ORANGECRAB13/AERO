@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import './Settings.css'
+import { apiFetch } from '../../api'
 
 const Settings = ({ sessionId }) => {
   const [loading, setLoading] = useState(false)
@@ -20,7 +21,7 @@ const Settings = ({ sessionId }) => {
     setSuccess(false)
 
     try {
-      const response = await fetch('http://127.0.0.1:3200/clear', {
+      const response = await apiFetch('/clear', {
         method: 'DELETE'
       })
 
@@ -82,4 +83,3 @@ const Settings = ({ sessionId }) => {
 }
 
 export default Settings
-

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import './Dashboard.css'
+import { apiFetch } from '../../api.js'   // adjust path if needed
 
 const Dashboard = ({ sessionId }) => {
   const [stats, setStats] = useState({
@@ -18,20 +19,21 @@ const Dashboard = ({ sessionId }) => {
 
   const fetchDashboardData = async () => {
     try {
-      const [missionsRes, astronautsRes, vehiclesRes, launchesRes] = await Promise.all([
-        fetch('http://127.0.0.1:3200/v1/admin/mission/list', {
-          headers: { 'controlUserSessionId': sessionId }
-        }),
-        fetch('http://127.0.0.1:3200/v1/admin/astronaut/pool', {
-          headers: { 'controlUserSessionId': sessionId }
-        }),
-        fetch('http://127.0.0.1:3200/v1/admin/launchvehicle/list', {
-          headers: { 'controlUserSessionId': sessionId }
-        }),
-        fetch('http://127.0.0.1:3200/v1/admin/launch/list', {
-          headers: { 'controlUserSessionId': sessionId }
-        })
-      ])
+      const [missionsRes, astronautsRes, vehiclesRes, launchesRes] =
+        await Promise.all([
+          apiFetch('/v1/admin/mission/list', {
+            headers: { 'controlUserSessionId': sessionId }
+          }),
+          apiFetch('/v1/admin/astronaut/pool', {
+            headers: { 'controlUserSessionId': sessionId }
+          }),
+          apiFetch('/v1/admin/launchvehicle/list', {
+            headers: { 'controlUserSessionId': sessionId }
+          }),
+          apiFetch('/v1/admin/launch/list', {
+            headers: { 'controlUserSessionId': sessionId }
+          })
+        ])
 
       const missions = missionsRes.ok ? await missionsRes.json() : { missions: [] }
       const astronauts = astronautsRes.ok ? await astronautsRes.json() : { astronauts: [] }
@@ -45,6 +47,7 @@ const Dashboard = ({ sessionId }) => {
         activeLaunches: launches.activeLaunches?.length || 0,
         completedLaunches: launches.completedLaunches?.length || 0
       })
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {

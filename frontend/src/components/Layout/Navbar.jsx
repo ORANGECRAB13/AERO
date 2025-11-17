@@ -51,6 +51,7 @@ const Navbar = ({ userDetails, onLogout }) => {
             </Link>
           </div>
         </div>
+
         <div className="navbar-right">
           {userDetails && (
             <span className="user-name">
@@ -67,4 +68,3 @@ const Navbar = ({ userDetails, onLogout }) => {
 }
 
 export default Navbar
-

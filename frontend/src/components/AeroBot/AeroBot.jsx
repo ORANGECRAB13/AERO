@@ -1,92 +1,96 @@
-import React, { useState, useEffect, useRef } from 'react'
-import './AeroBot.css'
+import React, { useState, useEffect, useRef } from 'react';
+import './AeroBot.css';
+import { apiFetch } from '../../api.js';  // adjust path if needed
 
 const AeroBot = ({ sessionId }) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState([])
-  const [inputMessage, setInputMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [astronauts, setAstronauts] = useState([])
-  const [selectedAstronautId, setSelectedAstronautId] = useState(null)
-  const messagesEndRef = useRef(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [astronauts, setAstronauts] = useState([]);
+  const [selectedAstronautId, setSelectedAstronautId] = useState(null);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      fetchAstronautsInActiveLaunches()
+      fetchAstronautsInActiveLaunches();
     }
-  }, [isOpen, sessionId])
+  }, [isOpen, sessionId]);
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const fetchAstronautsInActiveLaunches = async () => {
     try {
       const [astronautsRes, launchesRes] = await Promise.all([
-        fetch('http://127.0.0.1:3200/v1/admin/astronaut/pool', {
+        apiFetch('/v1/admin/astronaut/pool', {
           headers: { 'controlUserSessionId': sessionId }
         }),
-        fetch('http://127.0.0.1:3200/v1/admin/launch/list', {
+        apiFetch('/v1/admin/launch/list', {
           headers: { 'controlUserSessionId': sessionId }
         })
-      ])
+      ]);
 
       if (astronautsRes.ok && launchesRes.ok) {
-        const astronautsData = await astronautsRes.json()
-        const launchesData = await launchesRes.json()
-        
-        // Find astronauts in active launches (not ON_EARTH)
-        const activeLaunchAstronautIds = new Set()
-        launchesData.launches?.forEach(launch => {
+        const astronautsData = await astronautsRes.json();
+        const launchesData = await launchesRes.json();
+
+        const activeLaunchAstronautIds = new Set();
+        launchesData.launches?.forEach((launch) => {
           if (launch.state !== 'ON_EARTH' && launch.allocatedAstronauts) {
-            launch.allocatedAstronauts.forEach(id => activeLaunchAstronautIds.add(id))
+            launch.allocatedAstronauts.forEach((id) =>
+              activeLaunchAstronautIds.add(id)
+            );
           }
-        })
+        });
 
-        const activeAstronauts = astronautsData.astronauts?.filter(astronaut =>
-          activeLaunchAstronautIds.has(astronaut.astronautId)
-        ) || []
+        const activeAstronauts =
+          astronautsData.astronauts?.filter((astronaut) =>
+            activeLaunchAstronautIds.has(astronaut.astronautId)
+          ) || [];
 
-        setAstronauts(activeAstronauts)
-        
+        setAstronauts(activeAstronauts);
+
         if (activeAstronauts.length > 0 && !selectedAstronautId) {
-          setSelectedAstronautId(activeAstronauts[0].astronautId)
+          setSelectedAstronautId(activeAstronauts[0].astronautId);
         }
       }
     } catch (error) {
-      console.error('Error fetching astronauts:', error)
+      console.error('Error fetching astronauts:', error);
     }
-  }
+  };
 
   const handleSendMessage = async (e) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!inputMessage.trim() || !selectedAstronautId) {
-      setError('Please select an astronaut and enter a message')
-      return
+      setError('Please select an astronaut and enter a message');
+      return;
     }
 
-    const userMessage = inputMessage.trim()
-    setInputMessage('')
-    setError('')
-    setLoading(true)
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+    setError('');
+    setLoading(true);
 
-    // Add user message to chat
-    const newUserMessage = {
-      type: 'user',
-      content: userMessage,
-      timestamp: new Date()
-    }
-    setMessages(prev => [...prev, newUserMessage])
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: 'user',
+        content: userMessage,
+        timestamp: new Date()
+      }
+    ]);
 
     try {
-      const response = await fetch(
-        `http://127.0.0.1:3200/v1/admin/astronaut/${selectedAstronautId}/llmchat`,
+      const response = await apiFetch(
+        `/v1/admin/astronaut/${selectedAstronautId}/llmchat`,
         {
           method: 'POST',
           headers: {
@@ -97,53 +101,64 @@ const AeroBot = ({ sessionId }) => {
             messageRequest: userMessage
           })
         }
-      )
+      );
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        const botMessage = {
-          type: 'bot',
-          content: data.messageResponse || 'AeroBot failed to respond',
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, botMessage])
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'bot',
+            content: data.messageResponse || 'AeroBot failed to respond',
+            timestamp: new Date()
+          }
+        ]);
       } else {
-        setError(data.error || 'Failed to get response from AeroBot')
-        const errorMessage = {
-          type: 'error',
-          content: data.error || 'Failed to get response from AeroBot',
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, errorMessage])
+        const errorText = data.error || 'Failed to get response from AeroBot';
+        setError(errorText);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'error',
+            content: errorText,
+            timestamp: new Date()
+          }
+        ]);
       }
     } catch (err) {
-      const errorMsg = 'Network error. Please try again.'
-      setError(errorMsg)
-      const errorMessage = {
-        type: 'error',
-        content: errorMsg,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorMessage])
+      const errorMsg = 'Network error. Please try again.';
+      setError(errorMsg);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: 'error',
+          content: errorMsg,
+          timestamp: new Date()
+        }
+      ]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleToggle = () => {
-    setIsOpen(!isOpen)
+    setIsOpen(!isOpen);
     if (!isOpen) {
-      setMessages([])
-      setError('')
+      setMessages([]);
+      setError('');
     }
-  }
+  };
 
-  const selectedAstronaut = astronauts.find(a => a.astronautId === selectedAstronautId)
+  const selectedAstronaut = astronauts.find(
+    (a) => a.astronautId === selectedAstronautId
+  );
 
   return (
     <>
-      <div 
+      <div
         className={`aerobot-robot ${isOpen ? 'active' : ''}`}
         onClick={handleToggle}
       >
@@ -167,46 +182,52 @@ const AeroBot = ({ sessionId }) => {
                 <p>Space Mission Assistant</p>
               </div>
             </div>
-            <button className="chat-close-btn" onClick={handleToggle}>×</button>
+            <button className="chat-close-btn" onClick={handleToggle}>
+              ×
+            </button>
           </div>
 
           <div className="chat-astronaut-selector">
             <label>Select Astronaut:</label>
             <select
               value={selectedAstronautId || ''}
-              onChange={(e) => setSelectedAstronautId(parseInt(e.target.value))}
+              onChange={(e) =>
+                setSelectedAstronautId(parseInt(e.target.value))
+              }
               className="astronaut-select"
             >
               {astronauts.length === 0 ? (
                 <option value="">No astronauts in active launches</option>
               ) : (
-                astronauts.map(astronaut => (
+                astronauts.map((astronaut) => (
                   <option key={astronaut.astronautId} value={astronaut.astronautId}>
-                    {astronaut.nameFirst} {astronaut.nameLast} (ID: {astronaut.astronautId})
+                    {astronaut.nameFirst} {astronaut.nameLast} (ID:{' '}
+                    {astronaut.astronautId})
                   </option>
                 ))
               )}
             </select>
           </div>
 
-          {astronauts.length === 0 && (
-            <div className="chat-warning">
-              No astronauts are currently in active launches. AeroBot can only chat with astronauts who are in space!
-            </div>
-          )}
-
           <div className="chat-messages">
             {messages.length === 0 && (
               <div className="chat-welcome">
                 <p>👋 Hello! I'm AeroBot, your space mission assistant.</p>
-                <p>I can help with mission-related questions, astronaut wellbeing, and space science topics.</p>
+                <p>
+                  I can help with mission-related questions, astronaut wellbeing,
+                  and space science topics.
+                </p>
                 {selectedAstronaut && (
                   <p className="chat-astronaut-info">
-                    Currently chatting as: <strong>{selectedAstronaut.nameFirst} {selectedAstronaut.nameLast}</strong>
+                    Currently chatting as:{' '}
+                    <strong>
+                      {selectedAstronaut.nameFirst} {selectedAstronaut.nameLast}
+                    </strong>
                   </p>
                 )}
               </div>
             )}
+
             {messages.map((message, index) => (
               <div key={index} className={`chat-message ${message.type}`}>
                 <div className="message-content">{message.content}</div>
@@ -215,6 +236,7 @@ const AeroBot = ({ sessionId }) => {
                 </div>
               </div>
             ))}
+
             {loading && (
               <div className="chat-message bot loading">
                 <div className="message-content">
@@ -226,25 +248,31 @@ const AeroBot = ({ sessionId }) => {
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
 
-          {error && (
-            <div className="chat-error">{error}</div>
-          )}
+          {error && <div className="chat-error">{error}</div>}
 
           <form onSubmit={handleSendMessage} className="chat-input-form">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder={selectedAstronautId ? "Type your message..." : "Select an astronaut first..."}
-              disabled={!selectedAstronautId || loading || astronauts.length === 0}
+              placeholder="Type your message..."
+              disabled={
+                !selectedAstronautId || loading || astronauts.length === 0
+              }
               className="chat-input"
             />
             <button
               type="submit"
-              disabled={!selectedAstronautId || loading || !inputMessage.trim() || astronauts.length === 0}
+              disabled={
+                !selectedAstronautId ||
+                loading ||
+                !inputMessage.trim() ||
+                astronauts.length === 0
+              }
               className="chat-send-btn"
             >
               →
@@ -253,8 +281,7 @@ const AeroBot = ({ sessionId }) => {
         </div>
       )}
     </>
-  )
-}
+  );
+};
 
-export default AeroBot
-
+export default AeroBot;

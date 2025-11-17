@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import './Auth.css'
+import { apiFetch } from '../../api.js'   // adjust path if needed
 
 const Register = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -25,23 +26,20 @@ const Register = ({ onLogin }) => {
     setLoading(true)
 
     try {
-      const response = await fetch('http://127.0.0.1:3200/v1/admin/auth/register', {
+      // ➤ REGISTER USER
+      const response = await apiFetch('/v1/admin/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        // Auto-login after registration
-        const loginResponse = await fetch('http://127.0.0.1:3200/v1/admin/auth/login', {
+        // ➤ AUTO-LOGIN
+        const loginResponse = await apiFetch('/v1/admin/auth/login', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: formData.email,
             password: formData.password
@@ -49,11 +47,13 @@ const Register = ({ onLogin }) => {
         })
 
         const loginData = await loginResponse.json()
+
         if (loginResponse.ok) {
           onLogin(loginData.controlUserSessionId)
         } else {
-          setError('Registration successful but login failed. Please login manually.')
+          setError('Registration successful, but auto-login failed. Please login manually.')
         }
+
       } else {
         setError(data.error || 'Registration failed')
       }
@@ -73,8 +73,10 @@ const Register = ({ onLogin }) => {
           </h1>
           <p className="auth-subtitle">Create Your Account</p>
         </div>
+
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="error-message">{error}</div>}
+
           <div className="form-group">
             <label htmlFor="nameFirst">FIRST NAME</label>
             <input
@@ -87,6 +89,7 @@ const Register = ({ onLogin }) => {
               className="auth-input"
             />
           </div>
+
           <div className="form-group">
             <label htmlFor="nameLast">LAST NAME</label>
             <input
@@ -99,6 +102,7 @@ const Register = ({ onLogin }) => {
               className="auth-input"
             />
           </div>
+
           <div className="form-group">
             <label htmlFor="email">EMAIL</label>
             <input
@@ -111,6 +115,7 @@ const Register = ({ onLogin }) => {
               className="auth-input"
             />
           </div>
+
           <div className="form-group">
             <label htmlFor="password">PASSWORD</label>
             <input
@@ -123,10 +128,12 @@ const Register = ({ onLogin }) => {
               className="auth-input"
             />
           </div>
+
           <button type="submit" className="auth-button" disabled={loading}>
             {loading ? 'REGISTERING...' : 'REGISTER →'}
           </button>
         </form>
+
         <p className="auth-footer">
           Already have an account? <Link to="/login" className="auth-link">Login</Link>
         </p>
@@ -136,4 +143,3 @@ const Register = ({ onLogin }) => {
 }
 
 export default Register
-
